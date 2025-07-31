@@ -86,6 +86,7 @@ odyssey transactions eth --page 2  # Paginated Ethereum transactions
 | `transactions` | View transaction history | `odyssey transactions --page 2` |
 | `network` | Switch networks | `odyssey network testnet` |
 | `recovery` | Export recovery phrase | `odyssey recovery` |
+| `buy` | Buy cryptocurrency via MoonPay | `odyssey buy` |
 
 ## Architecture
 
