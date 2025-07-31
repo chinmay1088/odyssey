@@ -1,0 +1,47 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Build and cache dirs
+/bin/
+/build/
+/dist/
+/tmp/
+/*.log
+odyssey
+
+# Go stuff
+/vendor/
+/*.prof
+
+# Dependency directories
+Godeps/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Git specific
+*.orig
+
+# Test outputs
+*.coverprofile
+*.testresult
+*.coverage
+
+# Env files
+.env
+.env.*
