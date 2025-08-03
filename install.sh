@@ -46,13 +46,14 @@ if command -v git &> /dev/null; then
     fi
 else
     echo "⚠️ Git not found, using current directory..."
-TEMP_DIR=$(pwd)
-cd $TEMP_DIR
+    TEMP_DIR=$(pwd)
+    cd $TEMP_DIR
 
-if [ ! -f "go.mod" ]; then
-    echo "❌ Odyssey source not found in current directory."
-    echo "Please either install Git or place the Odyssey source code (with go.mod) here."
-    exit 1
+    if [ ! -f "go.mod" ]; then
+        echo "❌ Odyssey source not found in current directory."
+        echo "Please either install Git or place the Odyssey source code (with go.mod) here."
+        exit 1
+    fi
 fi
 
 echo "🔨 Building Odyssey..."
@@ -62,15 +63,19 @@ go build -o odyssey
 mkdir -p $INSTALL_DIR
 echo "📂 Created $INSTALL_DIR"
 
-# Move the binary
+# Move the binary and create alias
 if [ -w "$BIN_DIR" ]; then
-    sudo mv odyssey $BIN_DIR/
+    sudo mv odyssey "$BIN_DIR/"
+    sudo ln -sf "$BIN_DIR/odyssey" "$BIN_DIR/ody"
     echo "✅ Installed odyssey to $BIN_DIR"
+    echo "🔗 Created alias 'ody' -> odyssey"
 else
     echo "⚠️ Cannot write to $BIN_DIR, installing to $HOME/bin instead"
-    mkdir -p $HOME/bin
-    mv odyssey $HOME/bin/
+    mkdir -p "$HOME/bin"
+    mv odyssey "$HOME/bin/"
+    ln -sf "$HOME/bin/odyssey" "$HOME/bin/ody"
     echo "✅ Installed odyssey to $HOME/bin"
+    echo "🔗 Created alias 'ody' -> odyssey in $HOME/bin"
     
     # Add to PATH if needed
     if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
@@ -88,14 +93,17 @@ echo "🎉 Odyssey installation complete!"
 echo ""
 echo "To get started:"
 echo "  1. Initialize a new wallet: odyssey init"
+echo "     or: ody init"
 echo "  2. Unlock your wallet: odyssey unlock"
+echo "     or: ody unlock"
 echo "  3. View your addresses: odyssey address"
+echo "     or: ody address"
 echo ""
-echo "For more information, run: odyssey --help"
+echo "For more information, run: odyssey --help or ody --help"
 echo ""
 echo "🔁 Please restart your terminal or run:"
 echo "    source ~/.bashrc"
 echo "    # or if you use .profile"
 echo "    source ~/.profile"
 echo ""
-echo "Then run: odyssey"
+echo "Then run: odyssey or ody"
