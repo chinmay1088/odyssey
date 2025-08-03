@@ -12,8 +12,9 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "odyssey",
-	Short: "A secure command-line cryptocurrency wallet",
+	Use:     "odyssey",
+	Aliases: []string{"ody"},
+	Short:   "A secure command-line cryptocurrency wallet",
 	Long: `Odyssey is a secure, deterministic cryptocurrency wallet that supports
 Ethereum, Bitcoin, and Solana. It provides local key generation, encrypted
 storage, and offline transaction signing.

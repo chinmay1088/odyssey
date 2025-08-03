@@ -43,9 +43,18 @@ func showRecoveryPhrase(manager *wallet.Manager) error {
 		return fmt.Errorf("no wallet found. Run 'odyssey init' first")
 	}
 
-	// Check if wallet is unlocked
-	if !manager.IsUnlocked() {
-		return fmt.Errorf("wallet is locked. Run 'odyssey unlock' first")
+	// Get password from user
+	fmt.Print("Enter your wallet password: ")
+	password, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return fmt.Errorf("failed to read password: %w", err)
+	}
+	fmt.Println()
+
+	// Unlock wallet to get mnemonic
+	err = manager.Unlock(string(password))
+	if err != nil {
+		return fmt.Errorf("failed to unlock wallet: %w", err)
 	}
 
 	// Get mnemonic
