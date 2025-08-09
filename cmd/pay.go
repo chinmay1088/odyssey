@@ -166,10 +166,29 @@ func sendEthereum(manager *wallet.Manager, client *api.Client, amountStr, recipi
 	fmt.Printf("📊 Transaction Details:\n")
 	fmt.Printf("   From:    %s\n", senderAddress.Hex())
 	fmt.Printf("   To:      %s\n", recipient.Hex())
-	fmt.Printf("   Amount:  %.6f ETH\n", ethereum.WeiToEther(value))
+
+	ethAmount := ethereum.WeiToEther(value)
+	feeAmount := ethereum.WeiToEther(maxFee)
+
+	// Show USD values for mainnet
+	if !manager.IsTestnet() {
+		price, err := client.GetPrice("ethereum")
+		if err != nil {
+			fmt.Printf("   Amount:  %.6f ETH\n", ethAmount)
+			fmt.Printf("   Max Fee: ~%.6f ETH\n", feeAmount)
+		} else {
+			amountUSD := ethAmount * price.USD.InexactFloat64()
+			feeUSD := feeAmount * price.USD.InexactFloat64()
+			fmt.Printf("   Amount:  %.6f ETH (~$%.2f)\n", ethAmount, amountUSD)
+			fmt.Printf("   Max Fee: ~%.6f ETH (~$%.2f)\n", feeAmount, feeUSD)
+		}
+	} else {
+		fmt.Printf("   Amount:  %.6f ETH\n", ethAmount)
+		fmt.Printf("   Max Fee: ~%.6f ETH\n", feeAmount)
+	}
+
 	fmt.Printf("   Gas:     %d units\n", gasLimit)
 	fmt.Printf("   Gas Price: %.2f Gwei\n", float64(gasPrice.Uint64())/1e9)
-	fmt.Printf("   Max Fee: ~%.6f ETH\n", ethereum.WeiToEther(maxFee))
 	fmt.Printf("   Network: %s\n", manager.GetCurrentNetwork())
 	fmt.Println()
 
@@ -346,10 +365,30 @@ func sendBitcoin(manager *wallet.Manager, client *api.Client, amountStr, recipie
 	fmt.Printf("📊 Transaction Details:\n")
 	fmt.Printf("   From:    %s\n", senderAddress.String())
 	fmt.Printf("   To:      %s\n", recipient.String())
-	fmt.Printf("   Amount:  %.8f BTC\n", float64(value)/100000000.0)
-	fmt.Printf("   Fee:     %.8f BTC (%.0f sat/byte)\n", float64(estimatedFee)/100000000.0, float64(feeRate))
+
+	btcAmount := float64(value) / 100000000.0
+	feeAmount := float64(estimatedFee) / 100000000.0
+
+	// Always show USD for Bitcoin (Bitcoin is mainnet only)
+	price, err := client.GetPrice("bitcoin")
+	if err != nil {
+		fmt.Printf("   Amount:  %.8f BTC\n", btcAmount)
+		fmt.Printf("   Fee:     %.8f BTC (%.0f sat/byte)\n", feeAmount, float64(feeRate))
+	} else {
+		amountUSD := btcAmount * price.USD.InexactFloat64()
+		feeUSD := feeAmount * price.USD.InexactFloat64()
+		fmt.Printf("   Amount:  %.8f BTC (~$%.2f)\n", btcAmount, amountUSD)
+		fmt.Printf("   Fee:     %.8f BTC (~$%.2f) (%.0f sat/byte)\n", feeAmount, feeUSD, float64(feeRate))
+	}
+
 	if change > 0 {
-		fmt.Printf("   Change:  %.8f BTC\n", float64(change)/100000000.0)
+		changeAmount := float64(change) / 100000000.0
+		if err == nil {
+			changeUSD := changeAmount * price.USD.InexactFloat64()
+			fmt.Printf("   Change:  %.8f BTC (~$%.2f)\n", changeAmount, changeUSD)
+		} else {
+			fmt.Printf("   Change:  %.8f BTC\n", changeAmount)
+		}
 	}
 	fmt.Println()
 
@@ -449,8 +488,27 @@ func sendSolana(manager *wallet.Manager, client *api.Client, amountStr, recipien
 	fmt.Printf("📊 Transaction Details:\n")
 	fmt.Printf("   From:    %s\n", senderAddress.String())
 	fmt.Printf("   To:      %s\n", recipient.String())
-	fmt.Printf("   Amount:  %.9f SOL\n", float64(value)/1000000000.0)
-	fmt.Printf("   Fee:     %.9f SOL\n", float64(solanaFee)/1000000000.0)
+
+	solAmount := float64(value) / 1000000000.0
+	feeAmount := float64(solanaFee) / 1000000000.0
+
+	// Show USD values for mainnet
+	if !manager.IsTestnet() {
+		price, err := client.GetPrice("solana")
+		if err != nil {
+			fmt.Printf("   Amount:  %.9f SOL\n", solAmount)
+			fmt.Printf("   Fee:     %.9f SOL\n", feeAmount)
+		} else {
+			amountUSD := solAmount * price.USD.InexactFloat64()
+			feeUSD := feeAmount * price.USD.InexactFloat64()
+			fmt.Printf("   Amount:  %.9f SOL (~$%.2f)\n", solAmount, amountUSD)
+			fmt.Printf("   Fee:     %.9f SOL (~$%.2f)\n", feeAmount, feeUSD)
+		}
+	} else {
+		fmt.Printf("   Amount:  %.9f SOL\n", solAmount)
+		fmt.Printf("   Fee:     %.9f SOL\n", feeAmount)
+	}
+
 	fmt.Printf("   Network: %s\n", manager.GetCurrentNetwork())
 	fmt.Println()
 

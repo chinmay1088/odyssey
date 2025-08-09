@@ -35,8 +35,6 @@ func runBalance(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("wallet is locked. Run 'odyssey unlock' first")
 	}
 
-	usdFlag, _ := cmd.Flags().GetBool("usd")
-
 	// Determine which chains to check
 	var chains []string
 	if len(args) == 0 {
@@ -76,15 +74,15 @@ func runBalance(cmd *cobra.Command, args []string) error {
 	for _, chain := range chains {
 		switch chain {
 		case "eth":
-			if err := displayEthereumBalance(manager, client, usdFlag); err != nil {
+			if err := displayEthereumBalance(manager, client); err != nil {
 				fmt.Printf("❌ Ethereum: Error - %v\n", err)
 			}
 		case "btc":
-			if err := displayBitcoinBalance(manager, client, usdFlag); err != nil {
+			if err := displayBitcoinBalance(manager, client); err != nil {
 				fmt.Printf("❌ Bitcoin: Error - %v\n", err)
 			}
 		case "sol":
-			if err := displaySolanaBalance(manager, client, usdFlag); err != nil {
+			if err := displaySolanaBalance(manager, client); err != nil {
 				fmt.Printf("❌ Solana: Error - %v\n", err)
 			}
 		}
@@ -93,7 +91,7 @@ func runBalance(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func displayEthereumBalance(manager *wallet.Manager, client *api.Client, usdFlag bool) error {
+func displayEthereumBalance(manager *wallet.Manager, client *api.Client) error {
 	address, err := manager.GetEthereumAddress()
 	if err != nil {
 		return fmt.Errorf("failed to get address: %w", err)
@@ -104,20 +102,20 @@ func displayEthereumBalance(manager *wallet.Manager, client *api.Client, usdFlag
 		return fmt.Errorf("failed to fetch balance: %w", err)
 	}
 
-	if manager.IsTestnet() {
-		fmt.Printf("🔷 Ethereum (Sepolia): %s\n", formatEthereumBalance(balance))
-	} else {
-		fmt.Printf("🔷 Ethereum: %s\n", formatEthereumBalance(balance))
-	}
+	ethBalance := formatEthereumBalance(balance)
 
-	if usdFlag && !manager.IsTestnet() {
+	if manager.IsTestnet() {
+		fmt.Printf("🔷 Ethereum (Sepolia): %s\n", ethBalance)
+	} else {
+		// Always show USD on mainnet
 		price, err := client.GetPrice("ethereum")
 		if err != nil {
+			fmt.Printf("🔷 Ethereum: %s\n", ethBalance)
 			fmt.Printf("   💵 USD: Error fetching price - %v\n", err)
 		} else {
 			ethValue := float64(balance.Uint64()) / 1e18
 			usdValue := ethValue * price.USD.InexactFloat64()
-			fmt.Printf("   💵 USD: $%.2f\n", usdValue)
+			fmt.Printf("🔷 Ethereum: %s (~$%.2f)\n", ethBalance, usdValue)
 		}
 	}
 
@@ -126,7 +124,7 @@ func displayEthereumBalance(manager *wallet.Manager, client *api.Client, usdFlag
 	return nil
 }
 
-func displayBitcoinBalance(manager *wallet.Manager, client *api.Client, usdFlag bool) error {
+func displayBitcoinBalance(manager *wallet.Manager, client *api.Client) error {
 	// Bitcoin is only supported in mainnet
 	if manager.IsTestnet() {
 		return fmt.Errorf("bitcoin is not supported in testnet mode")
@@ -142,16 +140,14 @@ func displayBitcoinBalance(manager *wallet.Manager, client *api.Client, usdFlag 
 		return fmt.Errorf("failed to fetch balance: %w", err)
 	}
 
-	fmt.Printf("🟠 Bitcoin: %.8f BTC\n", balance)
-
-	if usdFlag {
-		price, err := client.GetPrice("bitcoin")
-		if err != nil {
-			fmt.Printf("   💵 USD: Error fetching price - %v\n", err)
-		} else {
-			usdValue := balance * price.USD.InexactFloat64()
-			fmt.Printf("   💵 USD: $%.2f\n", usdValue)
-		}
+	// Always show USD on mainnet (Bitcoin is mainnet only)
+	price, err := client.GetPrice("bitcoin")
+	if err != nil {
+		fmt.Printf("🟠 Bitcoin: %.8f BTC\n", balance)
+		fmt.Printf("   💵 USD: Error fetching price - %v\n", err)
+	} else {
+		usdValue := balance * price.USD.InexactFloat64()
+		fmt.Printf("🟠 Bitcoin: %.8f BTC (~$%.2f)\n", balance, usdValue)
 	}
 
 	fmt.Printf("   📍 Address: %s\n", address.String())
@@ -159,7 +155,7 @@ func displayBitcoinBalance(manager *wallet.Manager, client *api.Client, usdFlag 
 	return nil
 }
 
-func displaySolanaBalance(manager *wallet.Manager, client *api.Client, usdFlag bool) error {
+func displaySolanaBalance(manager *wallet.Manager, client *api.Client) error {
 	address, err := manager.GetSolanaAddress()
 	if err != nil {
 		return fmt.Errorf("failed to get address: %w", err)
@@ -171,25 +167,26 @@ func displaySolanaBalance(manager *wallet.Manager, client *api.Client, usdFlag b
 	}
 
 	solBalance := float64(balance) / 1e9
+
 	if manager.IsTestnet() {
 		fmt.Printf("🟣 Solana (Devnet): %.9f SOL\n", solBalance)
 	} else {
-		fmt.Printf("🟣 Solana: %.9f SOL\n", solBalance)
+		// Always show USD on mainnet
+		price, err := client.GetPrice("solana")
+		if err != nil {
+			fmt.Printf("🟣 Solana: %.9f SOL\n", solBalance)
+			if solBalance > 0 {
+				fmt.Printf("   💵 USD: Error fetching price - %v\n", err)
+			}
+		} else {
+			usdValue := solBalance * price.USD.InexactFloat64()
+			fmt.Printf("🟣 Solana: %.9f SOL (~$%.2f)\n", solBalance, usdValue)
+		}
 	}
 
 	// If balance is 0, this account likely doesn't exist on-chain yet
 	if balance == 0 {
 		fmt.Printf("   ℹ️ Note: This account doesn't exist on-chain yet. Send SOL to this address to activate it.\n")
-	}
-
-	if usdFlag && !manager.IsTestnet() {
-		price, err := client.GetPrice("solana")
-		if err != nil {
-			fmt.Printf("   💵 USD: Error fetching price - %v\n", err)
-		} else {
-			usdValue := solBalance * price.USD.InexactFloat64()
-			fmt.Printf("   💵 USD: $%.2f\n", usdValue)
-		}
 	}
 
 	fmt.Printf("   📍 Address: %s\n", address.String())

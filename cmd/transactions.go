@@ -266,13 +266,13 @@ func showAllTransactionsPaginated(manager *wallet.Manager, client *api.Client) e
 	}
 
 	// Display results in order
-	displayChainResult(results["ethereum"], "🔷", "Ethereum", manager.IsTestnet())
+	displayChainResult(results["ethereum"], "🔷", "Ethereum", manager.IsTestnet(), client)
 
 	if !manager.IsTestnet() {
-		displayChainResult(results["bitcoin"], "🟠", "Bitcoin", false)
+		displayChainResult(results["bitcoin"], "🟠", "Bitcoin", false, client)
 	}
 
-	displayChainResult(results["solana"], "🟣", "Solana", manager.IsTestnet())
+	displayChainResult(results["solana"], "🟣", "Solana", manager.IsTestnet(), client)
 
 	// Show pagination info
 	showPaginationInfo()
@@ -348,7 +348,7 @@ func showChainTransactionsPaginated(manager *wallet.Manager, client *api.Client,
 				fmt.Println("No more transactions on this page")
 			}
 		} else {
-			printTransactionsPaginated(txs)
+			printTransactionsPaginated(txs, client, "ethereum", manager.IsTestnet())
 		}
 
 	case "btc", "bitcoin":
@@ -403,7 +403,7 @@ func showChainTransactionsPaginated(manager *wallet.Manager, client *api.Client,
 				fmt.Println("No more transactions on this page")
 			}
 		} else {
-			printTransactionsPaginated(txs)
+			printTransactionsPaginated(txs, client, "bitcoin", manager.IsTestnet())
 		}
 
 	case "sol", "solana":
@@ -463,7 +463,7 @@ func showChainTransactionsPaginated(manager *wallet.Manager, client *api.Client,
 				fmt.Println("No more transactions on this page")
 			}
 		} else {
-			printTransactionsPaginated(txs)
+			printTransactionsPaginated(txs, client, "solana", manager.IsTestnet())
 		}
 
 	default:
@@ -475,7 +475,7 @@ func showChainTransactionsPaginated(manager *wallet.Manager, client *api.Client,
 	return nil
 }
 
-func displayChainResult(result ChainResult, emoji, name string, isTestnet bool) {
+func displayChainResult(result ChainResult, emoji, name string, isTestnet bool, client *api.Client) {
 	// Handle case where result might be empty
 	if result.Chain == "" {
 		return
@@ -526,12 +526,26 @@ func displayChainResult(result ChainResult, emoji, name string, isTestnet bool) 
 	} else {
 		fmt.Printf("   Address: %s\n", result.Address)
 		fmt.Println("   Recent transactions:")
-		printTransactionsIndented(result.Transactions)
+
+		// Determine crypto symbol from chain name
+		var cryptoSymbol string
+		switch name {
+		case "Ethereum":
+			cryptoSymbol = "ethereum"
+		case "Bitcoin":
+			cryptoSymbol = "bitcoin"
+		case "Solana":
+			cryptoSymbol = "solana"
+		default:
+			cryptoSymbol = "unknown"
+		}
+
+		printTransactionsIndented(result.Transactions, client, cryptoSymbol, isTestnet)
 	}
 	fmt.Println()
 }
 
-func printTransactionsPaginated(txs []api.Transaction) {
+func printTransactionsPaginated(txs []api.Transaction, client *api.Client, cryptoSymbol string, isTestnet bool) {
 	for i, tx := range txs {
 		// Direction indicator
 		direction := "⬅️ IN"
@@ -546,19 +560,34 @@ func printTransactionsPaginated(txs []api.Transaction) {
 		fromShort := truncateAddress(tx.From)
 		toShort := truncateAddress(tx.To)
 
+		// Get USD values
+		amountUSD := getUSDValue(client, cryptoSymbol, tx.Amount, isTestnet)
+		feeUSD := getUSDValue(client, cryptoSymbol, tx.Fee, isTestnet)
+
 		fmt.Printf("%d. %s | %s\n", i+1, direction, timeStr)
 		fmt.Printf("   Hash: %s\n", tx.Hash)
 		fmt.Printf("   From: %s\n", fromShort)
 		fmt.Printf("   To:   %s\n", toShort)
-		fmt.Printf("   Amount: %s\n", tx.Amount)
-		fmt.Printf("   Fee: %s\n", tx.Fee)
+
+		if amountUSD != "" {
+			fmt.Printf("   Amount: %s (%s)\n", tx.Amount, amountUSD)
+		} else {
+			fmt.Printf("   Amount: %s\n", tx.Amount)
+		}
+
+		if feeUSD != "" {
+			fmt.Printf("   Fee: %s (%s)\n", tx.Fee, feeUSD)
+		} else {
+			fmt.Printf("   Fee: %s\n", tx.Fee)
+		}
+
 		if i < len(txs)-1 {
 			fmt.Println()
 		}
 	}
 }
 
-func printTransactionsIndented(txs []api.Transaction) {
+func printTransactionsIndented(txs []api.Transaction, client *api.Client, cryptoSymbol string, isTestnet bool) {
 	for i, tx := range txs {
 		// Direction indicator
 		direction := "⬅️ IN"
@@ -573,12 +602,27 @@ func printTransactionsIndented(txs []api.Transaction) {
 		fromShort := truncateAddress(tx.From)
 		toShort := truncateAddress(tx.To)
 
+		// Get USD values
+		amountUSD := getUSDValue(client, cryptoSymbol, tx.Amount, isTestnet)
+		feeUSD := getUSDValue(client, cryptoSymbol, tx.Fee, isTestnet)
+
 		fmt.Printf("   %d. %s | %s\n", i+1, direction, timeStr)
 		fmt.Printf("      Hash: %s\n", tx.Hash)
 		fmt.Printf("      From: %s\n", fromShort)
 		fmt.Printf("      To:   %s\n", toShort)
-		fmt.Printf("      Amount: %s\n", tx.Amount)
-		fmt.Printf("      Fee: %s\n", tx.Fee)
+
+		if amountUSD != "" {
+			fmt.Printf("      Amount: %s (%s)\n", tx.Amount, amountUSD)
+		} else {
+			fmt.Printf("      Amount: %s\n", tx.Amount)
+		}
+
+		if feeUSD != "" {
+			fmt.Printf("      Fee: %s (%s)\n", tx.Fee, feeUSD)
+		} else {
+			fmt.Printf("      Fee: %s\n", tx.Fee)
+		}
+
 		if i < len(txs)-1 {
 			fmt.Println()
 		}
@@ -629,4 +673,79 @@ func truncateAddress(address string) string {
 		return address
 	}
 	return address[:6] + "..." + address[len(address)-6:]
+}
+
+// getUSDValue fetches price and converts crypto amount to USD
+func getUSDValue(client *api.Client, cryptoSymbol, amountStr string, isTestnet bool) string {
+	// Don't show USD for testnet
+	if isTestnet {
+		return ""
+	}
+
+	// Get price
+	price, err := client.GetPrice(cryptoSymbol)
+	if err != nil {
+		return ""
+	}
+
+	// Parse amount based on crypto type
+	var cryptoAmount float64
+	var success bool
+
+	switch cryptoSymbol {
+	case "ethereum":
+		// Parse ETH amount (format: "0.123456 ETH")
+		cryptoAmount, success = parseEthAmount(amountStr)
+	case "bitcoin":
+		// Parse BTC amount (format: "0.12345678 BTC")
+		cryptoAmount, success = parseBtcAmount(amountStr)
+	case "solana":
+		// Parse SOL amount (format: "1.234567890 SOL")
+		cryptoAmount, success = parseSolAmount(amountStr)
+	default:
+		return ""
+	}
+
+	if !success {
+		return ""
+	}
+
+	usdValue := cryptoAmount * price.USD.InexactFloat64()
+	return fmt.Sprintf("~$%.2f", usdValue)
+}
+
+// parseEthAmount extracts numeric value from ETH amount string
+func parseEthAmount(amountStr string) (float64, bool) {
+	// Remove "ETH" suffix and parse
+	if strings.HasSuffix(amountStr, " ETH") {
+		numStr := strings.TrimSuffix(amountStr, " ETH")
+		if amount, err := parseFloat(numStr); err == nil {
+			return amount, true
+		}
+	}
+	return 0, false
+}
+
+// parseBtcAmount extracts numeric value from BTC amount string
+func parseBtcAmount(amountStr string) (float64, bool) {
+	// Remove "BTC" suffix and parse
+	if strings.HasSuffix(amountStr, " BTC") {
+		numStr := strings.TrimSuffix(amountStr, " BTC")
+		if amount, err := parseFloat(numStr); err == nil {
+			return amount, true
+		}
+	}
+	return 0, false
+}
+
+// parseSolAmount extracts numeric value from SOL amount string
+func parseSolAmount(amountStr string) (float64, bool) {
+	// Remove "SOL" suffix and parse
+	if strings.HasSuffix(amountStr, " SOL") {
+		numStr := strings.TrimSuffix(amountStr, " SOL")
+		if amount, err := parseFloat(numStr); err == nil {
+			return amount, true
+		}
+	}
+	return 0, false
 }
