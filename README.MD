@@ -22,6 +22,13 @@ All sensitive data remains encrypted at rest and is processed entirely offline d
 
 ## Installation
 
+### Windows
+
+```powershell
+# Download and run the installer
+iwr -useb https://raw.githubusercontent.com/chinmay1088/odyssey/main/install.ps1 | iex
+```
+
 ### Linux
 
 ```bash
@@ -87,6 +94,7 @@ odyssey transactions eth --page 2  # Paginated Ethereum transactions
 | `network` | Switch networks | `odyssey network testnet` |
 | `recovery` | Export recovery phrase | `odyssey recovery` |
 | `buy` | Buy cryptocurrency via MoonPay | `odyssey buy` |
+| `update` | Update to latest version | `odyssey update` |
 
 ## Architecture
 

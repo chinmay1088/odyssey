@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	version = "1.0.0"
+	version = "1.0.4"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -42,7 +42,8 @@ Examples:
   odyssey address                 # Show all addresses
   odyssey balance --usd           # Check balances with USD values
   odyssey pay eth 0.1 0x1234...  # Send 0.1 ETH
-  odyssey network testnet         # Switch to testnet mode`,
+  odyssey network testnet        # Switch to testnet mode
+  odyssey update                  # Update to latest version`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -64,6 +65,7 @@ func init() {
 	rootCmd.AddCommand(transactionsCmd)
 	rootCmd.AddCommand(recoveryPhraseCmd)
 	rootCmd.AddCommand(buyCmd)
+	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(networkCmd) // Add network command
 }
