@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	version = "1.0.4"
+	version = "1.0.5"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -68,6 +68,7 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(networkCmd) // Add network command
+	rootCmd.AddCommand(exportCmd)  // Add export command
 }
 
 // versionCmd represents the version command
